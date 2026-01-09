@@ -61,6 +61,26 @@ jobs:
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
           Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait
           Remove-Item $installerPath -Force
+          - name: Install Steam
+        shell: pwsh
+        run: |
+          $steamUrl = "https://cdn.fastly.steamstatic.com/client/installer/SteamSetup.exe"
+          $installerPath = "$env:TEMP\SteamSetup.exe"
+          
+          Write-Host "📥 Downloading Steam Installer..."
+          Invoke-WebRequest -Uri $steamUrl -OutFile $installerPath
+          
+          Write-Host "⚙️ Installing Steam Silently..."
+          # The /S must be capitalized for the Steam installer (it uses NSIS)
+          $process = Start-Process -FilePath $installerPath -ArgumentList "/S" -Wait -PassThru
+          
+          if ($process.ExitCode -ne 0) {
+              Write-Error "Steam install failed with exit code $($process.ExitCode)"
+              exit 1
+          }
+
+          Write-Host "✅ Steam is installed. Cleaning up..."
+          Remove-Item $installerPath -Force
       - name: Establish Tailscale Connection
         run: |
           # Bring up Tailscale with the provided auth key and set a unique hostname
